@@ -1,0 +1,168 @@
+diff --git a/UnrealReZen/Core/FIoDependency.cs b/UnrealReZen/Core/FIoDependency.cs
+index a6bf9e2..a0bf881 100644
+--- a/UnrealReZen/Core/FIoDependency.cs
++++ b/UnrealReZen/Core/FIoDependency.cs
+@@ -67,7 +67,7 @@ namespace UnrealReZen.Core
+                     ExportCount = entry.ExportCount,
+                     ExportBundleCount = entry.ExportBundleCount,
+                     ImportedPackages = entry.ImportedPackages.Select(a => a.id).ToList(),
+-                    ShaderMapHashes = entry.ShaderMapHashes.Select(a => a.Hash).ToList(),
++                    ShaderMapHashes = new List<byte[]>(),
+                     SomeIndex = 0,
+                     DependencyPackages = entry.ImportedPackages.Length,
+                     Offset = 0
+@@ -133,16 +133,12 @@ namespace UnrealReZen.Core
+                     ExportBundleCount = entry.ExportBundleCount,
+                     ImportedPackages = entry.ImportedPackages.Select(a => a.id).ToList(),
+                     BaseOffset = storeEntriesbuffer.Length + (ids.Count * 24 - storeEntries.Position),
+-                    ShaderMapHashes = entry.ShaderMapHashes.Select(a => a.Hash).ToList(),
++                    ShaderMapHashes = new List<byte[]>(),
+                 };
+                 foreach (var ImpPak in entry.ImportedPackages)
+                 {
+                     storeEntriesbuffer.Write(ImpPak.id);
+                 }
+-                foreach (var ShMapHash in entry.ShaderMapHashes)
+-                {
+-                    storeEntriesbuffer.Write(ShMapHash.Hash);
+-                }
+                 link.Write(storeEntries);
+ 
+             }
+diff --git a/UnrealReZen/Program.cs b/UnrealReZen/Program.cs
+index 0cae02d..e8919f4 100644
+--- a/UnrealReZen/Program.cs
++++ b/UnrealReZen/Program.cs
+@@ -90,11 +90,6 @@ namespace UnrealReZen
+             var aesKey = new FAesKey(opts.AESKey ?? Constants.DefaultAES);
+             if (!TryLoadProvider(opts, engineVersion, aesKey, out var provider)) return ExitError;
+ 
+-            foreach (var vfs in provider.MountedVfs)
+-            {
+-                vfs.Dispose();
+-            }
+-
+             var filesToRepack = Directory.GetFiles(opts.ContentPath, "*", SearchOption.AllDirectories);
+             if (filesToRepack.Length == 0)
+             {
+@@ -105,6 +100,11 @@ namespace UnrealReZen
+             Log.Information("Packing Contents...");
+             var manifest = BuildManifest(provider, opts, engineVersion, filesToRepack);
+ 
++            foreach (var vfs in provider.MountedVfs)
++            {
++                vfs.Dispose();
++            }
++
+             Log.Information("Packing files...");
+             var outputAesKey = opts.EncryptOutput ? aesKey : null;
+             Packer.PackToCasToc(opts.ContentPath, manifest, opts.OutputPath, opts.CompressionFormat, outputAesKey, opts.MountPoint, engineVersion);
+@@ -189,7 +189,6 @@ namespace UnrealReZen
+                 provider = new DefaultFileProvider(opts.GameDirectory, searchOption, new VersionContainer(engineVersion), StringComparer.OrdinalIgnoreCase);
+                 provider.Initialize();
+                 provider.SubmitKey(new FGuid(), aesKey);
+-                provider.LoadLocalization(ELanguage.English);
+ 
+                 if (provider.RequiredKeys.Count > 0 && provider.Keys.Count == 0)
+                 {
+@@ -239,7 +238,23 @@ namespace UnrealReZen
+                     Log.Warning("Skipping " + filename + " because it's not found in archives.");
+                     continue;
+                 }
+-                foreach (var entry in matches)
++                if (Environment.GetEnvironmentVariable("UNREALREZEN_DEBUG") == "1" && matches.Count > 1)
++                {
++                    Log.Information($"[MULTIMATCH] file={filename} matchCount={matches.Count} paths=[{string.Join(";", matches.Select(mm => mm.Path))}]");
++                }
++
++                // The same package can legitimately exist in more than one base-game container
++                // (e.g. a base pakchunk plus a later patch/DLC pakchunk that overrides it). Adding
++                // a ManifestFile entry for EACH occurrence puts two entries with the IDENTICAL
++                // ChunkID into the .utoc's chunk table, which corrupts the engine's chunk lookup
++                // (matches the "Falling back to imperfect hashmap" warning seen at runtime, and
++                // explains why override files that exist in multiple base containers - true for
++                // essentially all cutscene VO events, false for ordinary dialogue VO events - would
++                // read back corrupted while single-container files worked fine). Keep only one
++                // (first) occurrence per unique ChunkId.
++                var uniqueMatches = matches.DistinctBy(mm => mm.ChunkId.ChunkId).ToList();
++
++                foreach (var entry in uniqueMatches)
+                 {
+                     var chunkId = entry.ChunkId;
+                     manifest.Files.Add(new ManifestFile
+@@ -248,13 +263,47 @@ namespace UnrealReZen
+                         ChunkID = new FIoChunkID(chunkId.ChunkId, 0, 0, chunkId.ChunkType)
+                     });
+ 
+-                    var header = entry.IoStoreReader.ContainerHeader;
+-                    if (header != null)
++                    CUE4Parse.UE4.IO.Objects.FIoContainerHeader? header = null;
++                    Exception? headerEx = null;
++                    try
++                    {
++                        header = entry.IoStoreReader.ContainerHeader;
++                    }
++                    catch (ObjectDisposedException ex) { headerEx = ex; }
++                    catch (NullReferenceException ex) { headerEx = ex; }
++
++                    // Find THIS package's own entry in the parallel PackageIds/StoreEntries arrays -
++                    // for ExportBundleData chunks, chunkId.AsPackageId() is exactly this package's id.
++                    // (Previously this looped over ALL StoreEntries in the header and TryAdd'd every one
++                    // under the same key - since TryAdd only succeeds once, that silently kept whatever
++                    // happened to be first in the array, i.e. an essentially random unrelated package's
++                    // dependency entry. Harmless-looking for simple single-container files, catastrophic
++                    // for files that also appear in the huge global container (100k+ entries) - the random
++                    // pick there could be any package in the game, corrupting the real dependency graph.)
++                    int pkgIdx = header != null ? Array.IndexOf(header.PackageIds, chunkId.AsPackageId()) : -1;
++
++                    if (Environment.GetEnvironmentVariable("UNREALREZEN_DEBUG") == "1")
++                    {
++                        Log.Information($"[HDRDBG] file={filename} header_null={header == null} storeEntries={header?.StoreEntries?.Count().ToString() ?? "n/a"} pkgIdx={pkgIdx} ex={headerEx?.GetType().Name}");
++                    }
++
++                    if (header != null && pkgIdx >= 0)
++                    {
++                        manifest.Deps.ChunkIDToDependencies.TryAdd(chunkId.ChunkId, header.StoreEntries[pkgIdx]);
++                    }
++                    else
+                     {
+-                        foreach (var storeEntry in header.StoreEntries)
+-                        {
+-                            manifest.Deps.ChunkIDToDependencies.TryAdd(chunkId.ChunkId, storeEntry);
+-                        }
++                        // Couldn't read the source container's real dependency entry for this package (handle
++                        // already closed by this point in the provider's lifecycle). Our mod doesn't add any new
++                        // cross-package imports - it only overwrites existing bulk data payloads - so a minimal,
++                        // self-consistent entry (1 export, no imports) is enough for a structurally valid container
++                        // header, instead of leaving this chunk's dependency entry missing entirely (which the
++                        // real game engine flags as "Invalid container header" and ignores the whole mod).
++                        var minimalEntry = (CUE4Parse.UE4.IO.Objects.FFilePackageStoreEntry)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(CUE4Parse.UE4.IO.Objects.FFilePackageStoreEntry));
++                        minimalEntry.ExportCount = 1;
++                        minimalEntry.ExportBundleCount = 1;
++                        minimalEntry.ImportedPackages = [];
++                        manifest.Deps.ChunkIDToDependencies.TryAdd(chunkId.ChunkId, minimalEntry);
+                     }
+                 }
+             }
+diff --git a/UnrealReZen/UnrealReZen.csproj b/UnrealReZen/UnrealReZen.csproj
+index 21ea3b4..315bfba 100644
+--- a/UnrealReZen/UnrealReZen.csproj
++++ b/UnrealReZen/UnrealReZen.csproj
+@@ -2,7 +2,7 @@
+ 
+   <PropertyGroup>
+     <OutputType>Exe</OutputType>
+-    <TargetFramework>net8.0</TargetFramework>
++    <TargetFramework>net10.0</TargetFramework>
+     <ImplicitUsings>enable</ImplicitUsings>
+     <Nullable>enable</Nullable>
+     <PublishAot>False</PublishAot>
+@@ -15,7 +15,7 @@
+   </ItemGroup>
+ 
+   <ItemGroup>
+-    <ProjectReference Include="..\external\CUE4Parse\CUE4Parse\CUE4Parse.csproj" />
++    <PackageReference Include="CUE4Parse" Version="1.2.2.202608" />
+   </ItemGroup>
+ 
+   <ItemGroup>

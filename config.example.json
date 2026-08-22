@@ -1,0 +1,10 @@
+{
+  "gameDir": "C:\\path\\to\\SteamLibrary\\steamapps\\common\\S.T.A.L.K.E.R. 2 Heart of Chornobyl\\Stalker2\\Content\\Paks",
+  "gameRoot": "C:\\path\\to\\SteamLibrary\\steamapps\\common\\S.T.A.L.K.E.R. 2 Heart of Chornobyl",
+  "usmap": "C:\\path\\to\\your\\Mappings.usmap",
+  "wwiseConsole": "C:\\Program Files (x86)\\Audiokinetic\\Wwise 2026.1.2.9249\\Authoring\\x64\\Release\\bin\\WwiseConsole.exe",
+  "ffmpeg": "ffmpeg",
+  "gameReaderAudioDir": "C:\\path\\to\\your\\GameReader\\audio",
+  "oodleDllPath": "C:\\path\\to\\oo2core_9_win64.dll",
+  "unrealRezenExe": "C:\\path\\to\\UnrealReZen\\bin\\Release\\net10.0\\UnrealReZen.exe"
+}
