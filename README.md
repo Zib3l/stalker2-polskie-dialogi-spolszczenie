@@ -72,7 +72,7 @@ nie obejmuje cutscenek, nie modyfikuje pliku wykonywalnego gry.
 |---|---|
 | [JAK-AKTUALIZOWAC-I-WDRAZAC.md](docs/JAK-AKTUALIZOWAC-I-WDRAZAC.md) | pełny pipeline, kontrole po buildzie, co robić po aktualizacji gry |
 | [SCHEMAT-DANYCH.md](docs/SCHEMAT-DANYCH.md) | model danych, opis kolumn, jak złączyć tabele |
-| [PUŁAPKI.md](docs/PUŁAPKI.md) | **13 błędów, które realnie zafałszowały wyniki** — przeczytaj przed analizą |
+| [PUŁAPKI.md](docs/PUŁAPKI.md) | **15 błędów, które realnie zafałszowały wyniki** — przeczytaj przed analizą |
 | [architecture.md](docs/architecture.md) | jak gra trzyma audio, jak działa splice |
 | [ZNANE-BLEDY.md](docs/ZNANE-BLEDY.md) | otwarte problemy, m.in. `NumPackages=0` |
 | [unrealrezen-build.md](docs/unrealrezen-build.md) | jak zbudować **załatany** UnrealReZen |

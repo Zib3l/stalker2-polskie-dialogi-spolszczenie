@@ -77,7 +77,7 @@ does not cover cutscenes, and it does not modify the game executable.
 |---|---|
 | [JAK-AKTUALIZOWAC-I-WDRAZAC.md](docs/JAK-AKTUALIZOWAC-I-WDRAZAC.md) | full pipeline, post-build checks, what to do after a game update |
 | [SCHEMAT-DANYCH.md](docs/SCHEMAT-DANYCH.md) | data model, column reference, how to join the tables |
-| [PUŁAPKI.md](docs/PUŁAPKI.md) | **13 mistakes that actually corrupted results** — read before analysing |
+| [PUŁAPKI.md](docs/PUŁAPKI.md) | **15 mistakes that actually corrupted results** — read before analysing |
 | [architecture.md](docs/architecture.md) | how the game stores audio, how the splice works |
 | [ZNANE-BLEDY.md](docs/ZNANE-BLEDY.md) | open problems, incl. `NumPackages=0` |
 | [unrealrezen-build.md](docs/unrealrezen-build.md) | how to build the **patched** UnrealReZen |
@@ -144,10 +144,17 @@ Open items that need a decision rather than work:
 
 ```bash
 python scripts/analysis/make_build_inputs.py --audio-dir "<...>"
-dotnet run --project scripts/BatchEncoder -c Release     # ogg -> wav -> wem
-dotnet run --project scripts/FullPatcher  -c Release     # splice into game assets
-<patched>/UnrealReZen.exe --content-path <ModOutput...> ...
+dotnet run --project scripts/BatchEncoder -c Release        # ogg -> wav -> wem (both variants)
+dotnet run --project scripts/FullPatcher  -c Release -- EN  # splice into game assets (EN or UA)
+<patched>/UnrealReZen.exe --content-path build/ModOutput_EN ...
 ```
+
+Or everything in one go: `.\build.ps1 -Variant EN` / `.\build.ps1 -Variant UA`.
+
+The pipeline patches **all three populations** (MAIN + EXTRA via `SwitchContainerLeaves`
++ RECOVERED) — since 2026-08-24 the full release-1.2 coverage builds from this repo:
+**17,621 lines EN / 17,579 UA** (the difference is 42 defective Ukrainian slots in the base
+game, skipped via `build/UA_SKIP_SIDS.txt`).
 
 Full instructions with verification steps:
 [JAK-AKTUALIZOWAC-I-WDRAZAC.md](docs/JAK-AKTUALIZOWAC-I-WDRAZAC.md).
