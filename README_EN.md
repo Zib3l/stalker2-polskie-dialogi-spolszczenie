@@ -1,205 +1,162 @@
 # S.T.A.L.K.E.R. 2: Heart of Chornobyl — Polish dialogue (Polish voice mod)
 
-A set of tools and SID → text → audio file → in-game identifier mapping that allows
-English/Ukrainian dialogue lines in S.T.A.L.K.E.R. 2: Heart of Chornobyl to be replaced
-with Polish voice audio, using existing [GameReader](https://gamereader.pl) recordings (author:
-Rafko) — a free overlay application that reads game subtitles aloud in real time.
+Replaces the English/Ukrainian dialogue lines in S.T.A.L.K.E.R. 2 with a **Polish voice-over**,
+using existing [GameReader](https://gamereader.pl) recordings (author: Rafko) — a free overlay
+that reads game subtitles aloud.
 
-## What this actually does
+**This repo is the project's primary knowledge base**: full mappings, the data schema, build
+and deployment instructions, and a list of the pitfalls that actually corrupted results at
+earlier stages.
 
-End result: you launch the game, set the voice language to English, and **~78% of spoken
-dialogue lines play in Polish**, read by the voice reader, instead of the original
-English/Ukrainian voice acting. This is not a separate installation or a modification
-of the game's executable file — it is a normal extractable mod: one `.pak/.ucas/.utoc`
-set that you drop into `~mods` and can remove at any time to return to the original.
-**The main pipeline is tested and confirmed to work in-game** — the cutscene pipeline is not.
+*Wersja polska: [README.md](README.md)*
 
-**What this does NOT do:**
-- It does not generate a new voice reader — it uses existing GameReader recordings (you must have them yourself,
-  e.g. by playing through the game once with GameReader running).
-- It does not cover cutscenes — those will still be in English/Ukrainian. Reason:
-  in cutscenes the voice-reader audio is split into smaller parts and triggered at specific
-  animation frames (a separate fragment for each cutscene moment), while GameReader records
-  complete lines in a single file — matching one to the other 1:1 is not as straightforward
-  as with normal dialogue and requires a separate mechanism (see
-  [docs/architecture.md](docs/architecture.md#cutscenes-excluded)). To support this properly,
-  there would need to be separate recordings for each cutscene fragment (not one recording of the
-  complete line) — GameReader does not provide such recordings.
-- It does not cover 100% of dialogue — about 22% of lines are either those GameReader has not yet recorded,
-  or lines controlled by a different game system (see [Limitations](#limitations)).
+> ### ⛔ Before you build — read [docs/ZNANE-BLEDY.md](docs/ZNANE-BLEDY.md)
+>
+> Known, unresolved issue: the container produced by `UnrealReZen` can fail to register its
+> packages (`NumPackages=0` in the game log). When that happens the engine loads the original
+> asset headers from the game and takes only the raw audio bytes from the mod — so **longer
+> Polish lines get truncated** exactly where the original recording ended. Check `Stalker2.log`
+> after your first launch.
 
-**How it works, in short** (full description: [docs/architecture.md](docs/architecture.md)):
+---
 
-1. `data/FINAL_lektor_mapping.csv` (already prepared and included in the repo) tells for each dialogue line:
-   what the text is, which GameReader audio file reads it, and under which exact identifier that
-   line lives in the game's audio files (Wwise SoundBanks).
-2. `BatchEncoder` takes the GameReader files referenced by this CSV and encodes them into the format the
-   game engine expects (`.wem`, via Wwise).
-3. `FullPatcher` opens the original game files, locates exactly the bytes containing the
-   English recording for each line, and replaces them with the newly encoded Polish audio — without
-   touching anything else in the file.
-4. The result is packed (`UnrealReZen`) into the format the engine actually loads as a mod, and
-   placed into `~mods`.
+## Status: release 1.2
 
-Everything below is the exact set of steps needed to reproduce this on your own.
+| | |
+|---|---:|
+| Normal spoken lines in the game | **19,071** |
+| Covered — **English** variant | **17,604 (92.3%)** |
+| Covered — **Ukrainian** variant | **17,562 (92.1%)** |
+| Still to be recorded | **1,383 unique texts** |
+| GameReader recordings in use | 15,871 of 17,387 (91%) |
 
-## Status
+Cutscenes are **not covered** — a separate, postponed topic.
 
-- **Main dialogue pipeline: works** (confirmed in-game). Normal in-game dialogue, without
-  cutscenes.
-- **Cutscene pipeline: experimental / paused.** It is not part of this repo — see
-  [docs/architecture.md](docs/architecture.md#cutscenes-excluded).
+> Every figure comes from a probe that reads bytes out of the game's paks (`RIFF` at the offset
+> from `BulkData`), not from flags in helper files. Methodology: [docs/PUŁAPKI.md](docs/PUŁAPKI.md).
 
-## What is in this repo, and what is not
+---
 
-**Included:**
-- `data/FINAL_lektor_mapping.csv` — mapping for 16,402 dialogue lines (78% of all
-  spoken lines in the game): SID → official Polish text → GameReader audio file name →
-  the actual media identifier in the game's SoundBanks. This is the key file — without it
-  nobody can reproduce this pipeline.
-- `data/SPEAKER_VOICE_MAPPING.csv` — for 1,675 lines in the coverage gap (see
-  [Limitations](#limitations)): character code → real in-game name → suggested voice profile →
-  example line. A concrete list for future recording, not just a number.
-- Source code for the custom tools (`scripts/BatchEncoder`, `scripts/FullPatcher`) — ready to
-  compile with `dotnet build`, plus `build.ps1` tying the whole pipeline together in one command.
-- Wwise source project (`WwiseProject/LektorProject`) — without generated banks/audio.
-- Architecture documentation and the exact UnrealReZen patch (`docs/`, `patches/`).
+## Which variant to pick
 
-**Not included (intentionally):**
-- No audio files (`.ogg`/`.wav`/`.wem`) — neither GameReader recordings nor generated WEMs.
-- No game files (`.pak`/`.ucas`/`.utoc`/`.uasset`/`.ubulk`, `Mappings.usmap`).
-- No ready-made mod (packed `LektorMainOnly_P`).
-- No backups, logs, working directories, or experimental cutscene tools.
+**The English variant is recommended** — it covers 42 more lines.
 
-## Requirements
+Not because it patches better. The game ships separate voice data per language and the two are
+**not equally complete**: in 42 events the Ukrainian media entry carries a `DebugName` belonging
+to a *different* SID — the Ukrainian slot holds another line's recording. The patcher must skip
+those, because overwriting them would break that other dialogue. This is a defect of the base
+game and cannot be fixed from the mod side.
 
-- Windows, .NET SDK 10 (see each tool's `.csproj`)
-- A legal copy of S.T.A.L.K.E.R. 2: Heart of Chornobyl (for `Paks` and your own `.usmap`)
-- Your own set of GameReader recordings (`audio/` folder from its export) — not included
-- Wwise Authoring **2026.1.2.9249** (for `WwiseConsole.exe`) — the exact version used to create
-  `WwiseProject/LektorProject.wproj`; requires a free account on audiokinetic.com to download
-  the installer at all
-- [UnrealReZen](https://github.com/rm-NoobInCoding/UnrealReZen), built with the patch from
-  `patches/UnrealReZen.patch` — see [docs/unrealrezen-build.md](docs/unrealrezen-build.md)
+The Ukrainian variant makes sense if you want to leave the English dub untouched.
 
-## What you need to prepare yourself before building the mod
+**Never install both at once.**
 
-1. **A legal copy of the game**, with `Stalker2\Content\Paks` available locally.
-2. **Your own `.usmap` file**, generated from your own current game installation via
-   [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) (public/older mappings usually do not match the latest patch) —
-   additionally use the community fix for version 2.0
-   ([mod 2341 on Nexus](https://www.nexusmods.com/stalker2heartofchornobyl/mods/2341)).
-   Launch the game, press the default UE4SS mapping dump shortcut (Ctrl+Numpad6), copy the resulting
-   `.usmap` and point `config.json` to it.
-3. **GameReader recordings** — the folder containing its `output1 (N).ogg` files (the second take, `output2`,
-   is not used by this pipeline). Point this folder to `gameReaderAudioDir` in `config.json`.
-4. **Wwise Authoring 2026.1.2.9249** — downloading the installer requires a free account at
-   audiokinetic.com.
-5. **UnrealReZen**, built with the patch — see [docs/unrealrezen-build.md](docs/unrealrezen-build.md).
-6. **`oo2core_9_win64.dll`** (Oodle library) — specify this in `config.json` as `oodleDllPath`.
-   It can be found, for example, in a [FModel](https://github.com/4sval/FModel) installation
-   or in the UnrealReZen release package.
+---
 
-None of the above is part of this repo — it is either copyrighted material (the game),
-data from your own local installation, or somebody else's large recording library.
+## Installation
 
-## Quick start
+1. Download **one** variant.
+2. Copy the three files (`.pak`, `.ucas`, `.utoc`) into:
+   ```
+   <game>/Stalker2/Content/Paks/~mods/
+   ```
+3. In game, set the voice language to match the variant (English / Ukrainian). Leave subtitles
+   set to Polish.
 
-1. Clone this repo.
-2. Copy `config.example.json` → `config.json` and fill in your paths (see above).
-   `config.json` is in `.gitignore` — never commit real local paths.
-3. Prepare the required inputs (see previous section).
+To uninstall, delete those three files.
 
-**Simplest path:** after filling in `config.json` (including `unrealRezenExe` and `gameRoot`,
-see `config.example.json`) simply run:
+**What this does NOT do:** it does not generate new voice-over (it reuses GameReader
+recordings — you need them yourself, e.g. from one playthrough with GameReader running), it
+does not cover cutscenes, and it does not modify the game executable.
 
-```powershell
-.uild.ps1          # builds, encodes audio, patches, packs - ends at build\Release\
-.uild.ps1 -Deploy  # same, plus automatically copies to ~mods
+---
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [JAK-AKTUALIZOWAC-I-WDRAZAC.md](docs/JAK-AKTUALIZOWAC-I-WDRAZAC.md) | full pipeline, post-build checks, what to do after a game update |
+| [SCHEMAT-DANYCH.md](docs/SCHEMAT-DANYCH.md) | data model, column reference, how to join the tables |
+| [PUŁAPKI.md](docs/PUŁAPKI.md) | **13 mistakes that actually corrupted results** — read before analysing |
+| [architecture.md](docs/architecture.md) | how the game stores audio, how the splice works |
+| [ZNANE-BLEDY.md](docs/ZNANE-BLEDY.md) | open problems, incl. `NumPackages=0` |
+| [unrealrezen-build.md](docs/unrealrezen-build.md) | how to build the **patched** UnrealReZen |
+
+---
+
+## Data
+
+The repo ships **two master tables** instead of a dozen near-duplicate CSVs. Everything the
+build consumes is **generated** from them — one source of truth, no silent drift.
+
+| File | Rows | Cols | Unit |
+|---|---:|---:|---|
+| `data/MASTER_SIDS.csv` | 33,528 | 52 | one dialogue line in the game |
+| `data/MASTER_RECORDINGS.csv` | 17,387 | 31 | one physical GameReader recording |
+| `data/SPEAKER_VOICE_MAPPING.csv` | — | — | character code → name → suggested voice profile |
+
+```bash
+python scripts/analysis/make_build_inputs.py --audio-dir "<folder with output1 (N).ogg>"
 ```
 
-The following steps 4–8 are exactly what the script does internally — useful if something fails
-and you need to find which stage, or if you prefer to control the process manually.
+`MASTER_SIDS.csv` answers everything through its `OverallStatus` column:
 
-4. Build the tools:
-   ```
-   dotnet build scripts/BatchEncoder
-   dotnet build scripts/FullPatcher
-   ```
+| Status | Count | Meaning |
+|---|---:|---|
+| `COVERED_IN_MOD` | 17,629 | Polish voice-over present |
+| `NO_VOICE_ASSET_IN_GAME` | 7,973 | the text exists, but the game ships no audio to replace |
+| `NON_VERBAL_OUT_OF_SCOPE` | 4,926 | stage directions, sounds |
+| `OPEN_NEEDS_NEW_RECORDING` | 1,442 | needs recording |
+| `CUTSCENE_OUT_OF_SCOPE` | 1,405 | cutscene |
+| `INTERNAL_MISMATCH` | 129 | media point at a different SID |
+| `OPEN_RECORDING_EXISTS` | 12 | recording exists, target unreachable |
+| `OPEN_BUILD_FAILED` | 9 | build failed |
+| `OPEN_REUSE_POSSIBLE` | 3 | coverable by reuse |
 
-5. **Audio encoding** — run `BatchEncoder`: converts matched `.ogg` files to `.wav`
-   (in parallel, through `ffmpeg`), then encodes everything to `.wem` in one pass via
-   `WwiseConsole convert-external-source`.
-   ```
-   dotnet run --project scripts/BatchEncoder -c Release
-   ```
+`MASTER_RECORDINGS.csv` does the same from the recording side (`UsageStatus`), with a SHA-1 of
+every audio file. All 17,387 recordings are **byte-unique** — duplicates exist only at the text
+level.
 
-6. **Patching** — run `FullPatcher`: for each line in the mapping, it finds the correct
-   `VO_..._<SID>.uasset` resource in the game, locates the original audio byte range in its
-   `BulkDataMap`, and inserts the new `.wem`.
-   ```
-   dotnet run --project scripts/FullPatcher -c Release
-   ```
+---
 
-7. **Repacking** with UnrealReZen into an IoStore container (see
-   `docs/unrealrezen-build.md` for exact build steps):
-   ```
-   UnrealReZen.exe --game-dir "<path to S.T.A.L.K.E.R. 2 Heart of Chornobyl>" ^
-     --content-path "build\ModOutput" --engine-version GAME_UE5_5 ^
-     --compression-format Oodle --output-path "<out>\LektorMainOnly_P.utoc"
-   ```
+## Want to help?
 
-8. **Deployment**: copy the generated `LektorMainOnly_P.pak/.ucas/.utoc` into
-   `Stalker2\Content\Paks\~mods` (first remove old files there — see below).
+What is missing most is **1,383 recordings**. Filter:
 
-## Deployment and testing
-
-1. Always start with a clean `~mods` — otherwise `FullPatcher`/`UnrealReZen` may read a
-   previous (possibly inconsistent) patch result instead of the original game file:
-   ```powershell
-   Remove-Item "<game>\Stalker2\Content\Paks\~mods\*"
-   ```
-2. Copy the freshly built `LektorMainOnly_P.pak/.ucas/.utoc` into `~mods\`.
-3. Launch the game, **set the voice/audio language to English** (we patch only this language
-   slot), enter a dialogue scene and check that Polish audio plays.
-4. Check `%LOCALAPPDATA%\Stalker2\Saved\Logs\Stalker2.log`:
-   - `Mounted IoStore container` — good, the mod loaded.
-   - `Invalid container header` — harmless, can appear even with a correctly working package.
-   - `ParserException`, `IndexOutOfRangeException`, or a crash while loading — bad, something in
-     the patched package is corrupted.
-5. To revert changes, simply remove the mod's `.pak/.ucas/.utoc` files from `~mods\`.
-
-## Repository structure
-
-```text
-build.ps1                      - ties the whole pipeline together in one command (see Quick start)
-data/
-  FINAL_lektor_mapping.csv     - key SID -> text -> audio -> MediaId mapping
-  SPEAKER_VOICE_MAPPING.csv    - coverage gap: character code -> name -> suggested voice
-scripts/
-  BatchEncoder/                - encodes matched audio through WwiseConsole
-  FullPatcher/                 - inserts encoded WEMs where the original game audio resides
-  mapping-reference/           - how FINAL_lektor_mapping.csv was created (not required for build)
-WwiseProject/                  - Wwise source project (without generated banks/audio)
-docs/
-  architecture.md              - pipeline step by step
-  unrealrezen-build.md         - exact UnrealReZen patch and build instructions
-patches/
-  UnrealReZen.patch            - patch (git apply) fixing IoStore container building
-config.example.json            - local configuration template
+```
+MASTER_SIDS.csv  ->  OverallStatus = OPEN_NEEDS_NEW_RECORDING
 ```
 
-## Limitations
+Profile: median 78 characters, 53 distinct speakers, mostly long one-off lines. The repeatable
+town chatter ("Cześć.", "Na razie!", "Czego chcesz?") is **already covered** — there is no
+economy of scale left here.
 
-- Covers 16,402 of ~21,040 spoken lines in the game (78%) — the rest are lines GameReader
-  has not recorded yet, or lines controlled by the cutscene system (see above).
-  Of these, about **1,675 lines have a real, ready-to-replace voice asset in the game, but are
-  still missing a Polish recording** — this is a concrete, countable future target (for example,
-  recording them through GameReader or with another voice reader/TTS), unlike lines outside the
-  standard dialogue system, which this pipeline does not touch.
-- Requires manual Wwise configuration matching the version used during development.
-- `data/FINAL_lektor_mapping.csv` contains the game's official Polish dialogue text (the `Text` column) —
-  required so that anyone can verify/extend the mapping without exporting it from the game again.
+Open items that need a decision rather than work:
+
+- **22 stage-direction cases** — the official text is `(umiera)` ("dies") while the recording
+  says "Umieram..." ("I'm dying..."). That is not the same content. None of them shipped.
+  Filter: `NeedsEditorialDecision = True`.
+- **Cutscenes** — pipeline experimental and broken, see [ZNANE-BLEDY.md](docs/ZNANE-BLEDY.md).
+
+---
+
+## Building from source
+
+```bash
+python scripts/analysis/make_build_inputs.py --audio-dir "<...>"
+dotnet run --project scripts/BatchEncoder -c Release     # ogg -> wav -> wem
+dotnet run --project scripts/FullPatcher  -c Release     # splice into game assets
+<patched>/UnrealReZen.exe --content-path <ModOutput...> ...
+```
+
+Full instructions with verification steps:
+[JAK-AKTUALIZOWAC-I-WDRAZAC.md](docs/JAK-AKTUALIZOWAC-I-WDRAZAC.md).
+
+> **Most common mistake:** using the stock UnrealReZen instead of the patched build. It does not
+> error out — it just produces a container roughly 3× too large that does not reference the
+> game's own data. Check: `grep -c "unsupported version 8" <log>` must return **0**.
+
+---
 
 ## License
 
@@ -209,6 +166,9 @@ Do not assume any license until this is clarified.
 
 The GameReader recordings used by this pipeline are owned by a third party (author: Rafko,
 [gamereader.pl](https://gamereader.pl)) and provided for non-commercial use within GameReader.
-This project is not affiliated with it. If you want to use this pipeline or its results **commercially**,
-contact Rafko and obtain his permission first — do not assume you have that right just because you have
-technical access to these recordings.
+This project is not affiliated with it. If you want to use this pipeline or its results
+**commercially**, contact Rafko and obtain his permission first — do not assume you have that
+right just because you have technical access to these recordings.
+
+The dialogue texts come from the game's official localisation (GSC Game World) and are included
+solely so the mapping can be reproduced and verified.
