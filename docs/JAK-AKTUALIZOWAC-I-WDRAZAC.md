@@ -60,24 +60,29 @@ build/FULL_BATCH_wem_mapping.csv         <- SID -> MediaId / WemName
 
 ```bash
 # 1. wygeneruj listy wejściowe z tabeli master
+#    (m.in. PATCH_LIST_EXTRA/RECOVERED i UA_SKIP_SIDS.txt; NIE pisze FULL_BATCH_wem_mapping)
 python scripts/analysis/make_build_inputs.py --audio-dir "<katalog z output1 (N).ogg>"
 
-# 2. zakoduj audio (ffmpeg + Wwise)
+# 2. zakoduj audio (ffmpeg + Wwise) — wspólne dla obu wariantów; pisze FULL_BATCH_wem_mapping.csv
+#    z kolumnami EnglishMediaId i UkrainianMediaId oraz koduje nagrania EXTRA/RECOVERED (gr_N*.wem)
 dotnet run --project scripts/BatchEncoder -c Release
 
-# 3. zpatchuj assety gry — osobno dla każdego wariantu językowego
-dotnet run --project scripts/FullPatcher -c Release
+# 3. zpatchuj assety gry — argument wybiera wariant językowy (EN domyślnie / UA)
+#    patchuje wszystkie trzy populacje: MAIN + EXTRA (SwitchContainer) + RECOVERED
+dotnet run --project scripts/FullPatcher -c Release -- EN   # -> build/ModOutput_EN
+dotnet run --project scripts/FullPatcher -c Release -- UA   # -> build/ModOutput_UA
 
 # 4. spakuj (ZAŁATANYM UnrealReZen)
 <ścieżka-do-załatanego>/UnrealReZen.exe \
-  --content-path "<ModOutput...>" \
-  --compression-format Zlib \
+  --content-path "build/ModOutput_<wariant>" \
+  --compression-format Oodle \
   --engine-version GAME_UE5_5 \
   --game-dir "<katalog gry>" \
-  --output-path "<Release>/<Nazwa>.utoc"
+  --output-path "<Release>/LektorMain_<wariant>_P.utoc"
 ```
 
-`build.ps1` spina kroki 1–4 w jedno polecenie.
+`build.ps1 -Variant EN|UA` spina kroki 1–4 w jedno polecenie (bez kroku 1 — uruchom go raz
+po każdej zmianie tabel master).
 
 > **Zawsze czyść `~mods` przed uruchomieniem patchera/enkodera** — inaczej narzędzia
 > przeczytają własny poprzedni output jako źródło.

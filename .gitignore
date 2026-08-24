@@ -19,6 +19,9 @@ WwiseProject/**/.cache/
 WwiseProject/**/Cache/
 *.validationcache
 
+# --- GameReader recordings & subtitles — Rafko's property, never commit ---
+gamereader/
+
 # --- Game / mod assets — never commit these ---
 *.pak
 *.ucas

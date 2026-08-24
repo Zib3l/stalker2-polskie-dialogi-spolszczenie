@@ -180,3 +180,26 @@ Jesli jest wiekszy — uzyles zlego binarium.
 
 Buduj z lataka: `patches/UnrealReZen.patch`, instrukcja w
 [unrealrezen-build.md](unrealrezen-build.md).
+
+---
+
+## 14. Wadliwych slotów UA nie wykryjesz po `DebugName`
+
+41 z 42 SID-ów `Is41UkrainianMismatch` ma w ukraińskim wpisie media `DebugName`, który
+**wygląda poprawnie** (zawiera właściwy SID) i MediaId zgodny z tabelą — strażnik oparty
+o `DebugName` przepuszcza je wszystkie, mimo że per weryfikacja bajtowa slot nie ma
+prawdziwego audio (`UA_HasRealAudio=False`).
+
+Jedyna niezawodna metoda: **jawna lista pominięć z tabeli master**
+(`build/UA_SKIP_SIDS.txt`, generowana przez `make_build_inputs.py`). FullPatcher w wariancie
+UA wymaga tej listy i twardo pomija te SID-y (`UaDefectiveSlotSkip` w raporcie).
+
+---
+
+## 15. Jeden plik — jeden właściciel
+
+`FULL_BATCH_wem_mapping.csv` był pisany przez **dwa** narzędzia (`make_build_inputs.py`
+i `BatchEncoder`) w **różnych schematach** — które uruchomiłeś później, taki schemat
+dostawał FullPatcher, z błędem `KeyNotFoundException` w najlepszym razie, z cichym złym
+mapowaniem w najgorszym. Od 2026-08-24 plik pisze wyłącznie BatchEncoder
+(z kolumnami `EnglishMediaId` i `UkrainianMediaId`).
