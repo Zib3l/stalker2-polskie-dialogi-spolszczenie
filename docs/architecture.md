@@ -32,7 +32,7 @@ author. Each row ties one in-game dialogue line (`SID`) to:
   `fuzzy` (bigram/Dice similarity ≥ 0.85, for lines where GameReader's TTS-pronunciation text
   differs slightly from the game's own subtitle text).
 
-16,402 of the game's ~21,040 spoken dialogue lines (78%) are covered. The remainder are either
+**Updated 2026-08-24 (release 1.2).** The game has **19,071** normal spoken dialogue lines (audio byte-verified, cutscenes and non-verbal cues excluded); current builds cover **17,604 of them in the English slot (92.3%) and 17,562 in the Ukrainian slot (92.1%)**. The mapping shipped in this repo (`FINAL_lektor_mapping.csv`, 16,402 rows) is the MAIN-build population; later builds add more via `SwitchContainerLeaves` support. Of the 1,467 uncovered lines, **1,383 unique recordings are genuinely missing** (the earlier `~21,040` / `78%` / `1,675` / `1,397` figures are superseded). The remainder are either
 lines GameReader hasn't recorded yet, or lines driven by the game's cutscene/Sequencer system
 rather than the standard per-line dialogue events this pipeline targets (see "Cutscenes" below).
 
