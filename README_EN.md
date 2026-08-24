@@ -106,10 +106,10 @@ python scripts/analysis/make_build_inputs.py --audio-dir "<folder with output1 (
 | `COVERED_IN_MOD` | 17,629 | Polish voice-over present |
 | `NO_VOICE_ASSET_IN_GAME` | 7,973 | the text exists, but the game ships no audio to replace |
 | `NON_VERBAL_OUT_OF_SCOPE` | 4,926 | stage directions, sounds |
-| `OPEN_NEEDS_NEW_RECORDING` | 1,442 | needs recording |
+| `OPEN_NEEDS_NEW_RECORDING` | 1,431 | needs recording |
 | `CUTSCENE_OUT_OF_SCOPE` | 1,405 | cutscene |
 | `INTERNAL_MISMATCH` | 129 | media point at a different SID |
-| `OPEN_RECORDING_EXISTS` | 12 | recording exists, target unreachable |
+| `OPEN_RECORDING_EXISTS` | 23 | recording exists, awaiting build (11 mapped 2026-08-24) or target unreachable |
 | `OPEN_BUILD_FAILED` | 9 | build failed |
 | `OPEN_REUSE_POSSIBLE` | 3 | coverable by reuse |
 
@@ -117,11 +117,20 @@ python scripts/analysis/make_build_inputs.py --audio-dir "<folder with output1 (
 every audio file. All 17,387 recordings are **byte-unique** — duplicates exist only at the text
 level.
 
+> **Note (2026-08-24):** the `UNUSED_POTENTIAL_LOST_MAPPING(_REVIEW)` statuses in
+> `MASTER_RECORDINGS.csv` (370 rows) are **historical** — 347 of those recordings were already
+> recovered and shipped as the RECOVERED population, and a further 11 (REVIEW cases with
+> notation differences: digits vs. words, punctuation) were mapped manually on 2026-08-24
+> (`MappedVia = RECOVERED`, `OverallStatus = OPEN_RECORDING_EXISTS` — awaiting a build).
+> The remainder are duplicates covered by a twin recording or failed patches (4 kapitan Smidt
+> SIDs from EQ01: `NoMediaMatch`/`NoUasset`). `MASTER_SIDS.csv`
+> (`MappedVia`/`MappedRecordingN`) is authoritative, not the recordings' `UsageStatus`.
+
 ---
 
 ## Want to help?
 
-What is missing most is **1,383 recordings**. Filter:
+What is missing most is **1,376 recordings** (1,431 lines after deduplicating identical texts). Filter:
 
 ```
 MASTER_SIDS.csv  ->  OverallStatus = OPEN_NEEDS_NEW_RECORDING
