@@ -90,7 +90,7 @@ Kolumna `UsageStatus`. Sumuje się do 17 387.
 | `USED` / `USED_MULTI` | wykorzystane przez 1 / wiele SID-ów |
 | `UNUSED_CUTSCENE` | należy do cutscenek — poza zakresem |
 | `UNUSED_TARGET_HAS_NO_VOICE_ASSET` | **tekst jest w grze, ale gra nie ma audio do podmiany** |
-| `UNUSED_POTENTIAL_LOST_MAPPING` | realny kandydat — nagranie czeka, target istnieje |
+| `UNUSED_POTENTIAL_LOST_MAPPING` | **status historyczny** — z 370 takich wierszy 347 odzyskano i wdrożono (populacja RECOVERED), 11 zmapowano ręcznie 2026-08-24; wiążący jest `MappedVia` w MASTER_SIDS |
 | `UNUSED_DUPLICATE_TEXT` | ten sam tekst nagrany kilka razy |
 | `UNUSED_NO_MATCH_IN_GAME` | brak odpowiednika (głównie krótkie okrzyki bojowe) |
 
@@ -111,7 +111,7 @@ Kolumna `UsageStatus`. Sumuje się do 17 387.
 |---|---|
 | `FINAL_lektor_mapping.csv` | mapowanie buildu MAIN: SID → tekst → plik audio → MediaId |
 | `PATCH_LIST_EXTRA.csv` | mapowanie buildu EXTRA (kwestie w SwitchContainer) |
-| `PATCH_LIST_RECOVERED.csv` | mapowanie odzyskanych nagrań (wydanie 1.2) |
+| `PATCH_LIST_RECOVERED.csv` | mapowanie odzyskanych nagrań (376 z wydania 1.2 + 11 zmapowanych 2026-08-24) |
 | `FULL_BATCH_wem_mapping.csv` | SID → MediaId → nazwa `.wem` |
 | `SPEAKER_VOICE_MAPPING.csv` | kod postaci → imię w grze → sugerowany profil głosu |
 | `analysis/TTS_TRANSFORMATIONS.csv` | statystyki transformacji zapisu TTS |

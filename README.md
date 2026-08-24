@@ -101,10 +101,10 @@ python scripts/analysis/make_build_inputs.py --audio-dir "<katalog z output1 (N)
 | `COVERED_IN_MOD` | 17 629 | jest polski lektor |
 | `NO_VOICE_ASSET_IN_GAME` | 7 973 | tekst jest, ale gra nie ma pliku audio do podmiany |
 | `NON_VERBAL_OUT_OF_SCOPE` | 4 926 | didaskalia, dźwięki |
-| `OPEN_NEEDS_NEW_RECORDING` | 1 442 | trzeba nagrać |
+| `OPEN_NEEDS_NEW_RECORDING` | 1 431 | trzeba nagrać |
 | `CUTSCENE_OUT_OF_SCOPE` | 1 405 | cutscenka |
 | `INTERNAL_MISMATCH` | 129 | media wskazują na inny SID |
-| `OPEN_RECORDING_EXISTS` | 12 | nagranie istnieje, target nieosiągalny |
+| `OPEN_RECORDING_EXISTS` | 23 | nagranie istnieje, czeka na build (11 zmapowanych 2026-08-24) lub target nieosiągalny |
 | `OPEN_BUILD_FAILED` | 9 | build się nie udał |
 | `OPEN_REUSE_POSSIBLE` | 3 | do pokrycia przez reuse |
 
@@ -112,11 +112,20 @@ python scripts/analysis/make_build_inputs.py --audio-dir "<katalog z output1 (N)
 pliku audio. Wszystkie 17 387 nagrań są **unikalne bajtowo** — duplikaty istnieją tylko na
 poziomie tekstu.
 
+> **Uwaga (2026-08-24):** statusy `UNUSED_POTENTIAL_LOST_MAPPING(_REVIEW)` w
+> `MASTER_RECORDINGS.csv` (370 wierszy) są **historyczne** — 347 z tych nagrań zostało już
+> odzyskanych i wdrożonych jako populacja RECOVERED, a kolejnych 11 (przypadki REVIEW z
+> różnicami zapisu: cyfry vs słowa, interpunkcja) zmapowano ręcznie 2026-08-24
+> (`MappedVia = RECOVERED`, `OverallStatus = OPEN_RECORDING_EXISTS` — czekają na build).
+> Reszta to duplikaty pokryte bliźniaczym nagraniem albo nieudane patche (4 SID-y kapitana
+> Smidta z EQ01: `NoMediaMatch`/`NoUasset`). Wiążący jest zawsze `MASTER_SIDS.csv`
+> (`MappedVia`/`MappedRecordingN`), nie `UsageStatus` nagrań.
+
 ---
 
 ## Chcesz pomóc?
 
-Najbardziej brakuje **1 383 nagrań**. Filtr:
+Najbardziej brakuje **1 376 nagrań** (1 431 kwestii po deduplikacji identycznych tekstów). Filtr:
 
 ```
 MASTER_SIDS.csv  ->  OverallStatus = OPEN_NEEDS_NEW_RECORDING
