@@ -1,6 +1,20 @@
-# Znane błędy — stan na 2026-08-23
+# Znane błędy — stan na 2026-08-24
 
 ## ⛔ KRYTYCZNY: kontenery budowane tym pipeline'em nie rejestrują pakietów
+
+> **Potwierdzone ponownie 2026-08-24** na świeżym buildzie (UnrealReZen `bf9e8de` + pełny
+> `patches/UnrealReZen.patch`, kompresja Oodle, 35 243 pliki):
+>
+> ```
+> LogIoDispatcher: Display: Toc loaded : .../~mods/LektorMain_EN_P.utoc, Id=1ab9f282a683ddc4, ..., EntryCount=35243
+> LogIoDispatcher: Warning: Invalid container header in file '.../~mods/LektorMain_EN_P'
+> LogFilePackageStore: Mounting container: Id=ffffffffffffffff, Order=103, NumPackages=0
+> ```
+>
+> TOC ładuje się z prawdziwym `Id`, ale nagłówek kontenera jest odrzucany i magazyn pakietów
+> nie przyjmuje niczego. Mod gra po polsku (surowe bajty WEM są czytane z naszego kontenera),
+> ale obowiązuje oryginalny `SerialSize` — dłuższe polskie kwestie są ucinane. Łatka
+> UnrealReZen w obecnym kształcie **nie rozwiązuje** tego problemu.
 
 **Mod zbudowany według instrukcji z README ucina dłuższe polskie kwestie.** Przyczyna jest
 znana i leży w narzędziu pakującym (`UnrealReZen`), nie w mapowaniu ani w samych nagraniach.

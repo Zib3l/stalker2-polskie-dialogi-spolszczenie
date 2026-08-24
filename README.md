@@ -138,10 +138,17 @@ Otwarte pozycje wymagające decyzji, nie pracy:
 
 ```bash
 python scripts/analysis/make_build_inputs.py --audio-dir "<...>"
-dotnet run --project scripts/BatchEncoder -c Release     # ogg -> wav -> wem
-dotnet run --project scripts/FullPatcher  -c Release     # splice do assetów
-<załatany>/UnrealReZen.exe --content-path <ModOutput...> ...
+dotnet run --project scripts/BatchEncoder -c Release        # ogg -> wav -> wem (oba warianty)
+dotnet run --project scripts/FullPatcher  -c Release -- EN  # splice do assetów (EN lub UA)
+<załatany>/UnrealReZen.exe --content-path build/ModOutput_EN ...
 ```
+
+Albo wszystko naraz: `.\build.ps1 -Variant EN` / `.\build.ps1 -Variant UA`.
+
+Pipeline patchuje **wszystkie trzy populacje** (MAIN + EXTRA przez `SwitchContainerLeaves`
++ RECOVERED) — od 2026-08-24 pełne pokrycie wydania 1.2 buduje się z tego repo:
+**17 621 kwestii EN / 17 579 UA** (różnica to 42 wadliwe ukraińskie sloty w samej grze,
+pomijane przez `build/UA_SKIP_SIDS.txt`).
 
 Pełna instrukcja z kontrolami: [JAK-AKTUALIZOWAC-I-WDRAZAC.md](docs/JAK-AKTUALIZOWAC-I-WDRAZAC.md).
 

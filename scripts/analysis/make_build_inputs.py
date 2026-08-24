@@ -83,14 +83,9 @@ def main():
           ["SID", "MatchType", "Score", "Text", "Audio1", "Audio2",
            "EnglishMediaId", "UkrainianMediaId"])
 
-    # --- SID -> MediaId / WemName
-    wem_rows = [{
-        "SID": r["SID"],
-        "MediaId": r["PolishMediaId"],
-        "WavName": (r["PolishWemName"] or "").replace(".wem", ".wav"),
-        "WemName": r["PolishWemName"],
-    } for r in rows if r["PolishWemName"]]
-    write("FULL_BATCH_wem_mapping.csv", wem_rows, ["SID", "MediaId", "WavName", "WemName"])
+    # NOTE: FULL_BATCH_wem_mapping.csv is written by BatchEncoder (the sole owner of that file,
+    # with per-language MediaId columns) — generating it here too caused the two writers to
+    # silently overwrite each other's schema.
 
     # --- EXTRA and RECOVERED populations share one schema
     def patch_rows(via):
@@ -109,6 +104,17 @@ def main():
     write("PATCH_LIST_EXTRA.csv", patch_rows("EXTRA"), cols)
 
     write("PATCH_LIST_RECOVERED.csv", patch_rows("RECOVERED"), cols)
+
+    # --- UA variant skip list: SIDs whose Ukrainian media slot is defective in the base game
+    # (Is41UkrainianMismatch / no real UA audio) — FullPatcher must not touch them in UA builds.
+    ua_skip = [r["SID"] for r in rows
+               if r["MappedVia"] and (r["Is41UkrainianMismatch"] == "True"
+                                      or (r["OverallStatus"] == "COVERED_IN_MOD"
+                                          and r["UA_HasRealAudio"] == "False"))]
+    p = os.path.join(OUTDIR, "UA_SKIP_SIDS.txt")
+    with open(p, "w", encoding="utf-8") as f:
+        f.write("\n".join(sorted(set(ua_skip))))
+    print(f"  {'UA_SKIP_SIDS.txt':30} {len(set(ua_skip)):6} SIDs")
 
     print(f"\nwritten to {OUTDIR}")
 

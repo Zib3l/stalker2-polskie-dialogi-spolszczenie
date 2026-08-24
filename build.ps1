@@ -14,12 +14,13 @@
   .\build.ps1 -Deploy
 #>
 param(
-    [switch]$Deploy
+    [switch]$Deploy,
+    [ValidateSet('EN', 'UA')][string]$Variant = 'EN'
 )
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
-$modName = "LektorMainOnly_P"
+$modName = "LektorMain_${Variant}_P"
 
 function Step($msg) {
     Write-Host ""
@@ -43,7 +44,7 @@ dotnet run --project "$root\scripts\BatchEncoder" -c Release --no-build
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
 Step "3/4 - Patching the game's own dialogue files"
-dotnet run --project "$root\scripts\FullPatcher" -c Release --no-build
+dotnet run --project "$root\scripts\FullPatcher" -c Release --no-build -- $Variant
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
 Step "4/4 - Repacking into a mod (UnrealReZen)"
@@ -60,7 +61,7 @@ $releaseDir = "$root\build\Release"
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
 & $config.unrealRezenExe `
     --game-dir $config.gameRoot `
-    --content-path "$root\build\ModOutput" `
+    --content-path "$root\build\ModOutput_$Variant" `
     --engine-version GAME_UE5_5 `
     --compression-format Oodle `
     --output-path "$releaseDir\$modName.utoc"
@@ -75,7 +76,8 @@ if ($Deploy) {
     New-Item -ItemType Directory -Force -Path $modsDir | Out-Null
     Remove-Item "$modsDir\*" -Force -ErrorAction SilentlyContinue
     Copy-Item "$releaseDir\$modName.pak", "$releaseDir\$modName.ucas", "$releaseDir\$modName.utoc" -Destination $modsDir -Force
-    Write-Host "Copied to $modsDir - set voice language to English in-game and test." -ForegroundColor Green
+    $lang = if ($Variant -eq 'UA') { 'Ukrainian' } else { 'English' }
+    Write-Host "Copied to $modsDir - set voice language to $lang in-game and test." -ForegroundColor Green
 } else {
     Write-Host "Not deployed (run with -Deploy to also copy into ~mods automatically)." -ForegroundColor Yellow
 }
